@@ -31,12 +31,24 @@ document.getElementById('app').innerHTML = `
 let map;
 let startMarker, endMarker, routeLine;
 
+const southWest = L.latLng(-26.33, 27.95);
+const northEast = L.latLng(-26.05, 28.20);
+const joburgBounds = L.latLngBounds(southWest, northEast);
+
 setTimeout(() => {
-  map = L.map('map').setView([-26.1951, 28.0697], 16);
+  map = L.map('map', {
+    maxBounds: joburgBounds,
+    maxBoundsViscosity: 1.0,
+    minZoom: 11,
+    maxZoom: 18,
+  }).setView([-26.1951, 28.0697], 13); // Center on Makers Valley
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
   }).addTo(map);
+
+  setupAutocomplete('start-address', 'start-suggestions');
+  setupAutocomplete('end-address', 'end-suggestions');
 }, 0);
 
 // Geocoding helper
