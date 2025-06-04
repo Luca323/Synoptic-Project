@@ -2,8 +2,10 @@ document.getElementById('app').innerHTML = `
   <h2>Your Safe Route</h2>
 
   <div id="location-inputs">
-    <input type="text" id="start-address" placeholder="Enter start location" />
-    <input type="text" id="end-address" placeholder="Enter destination" />
+    <input type="text" id="start-address" placeholder="Enter start location" autocomplete="off" />
+    <div id="start-suggestions" class="autocomplete-suggestions"></div>
+    <input type="text" id="end-address" placeholder="Enter destination" autocomplete="off" />
+    <div id="end-suggestions" class="autocomplete-suggestions"></div>
 
     <select id="travel-mode">
       <option value="foot-walking">🚶 Walking</option>
@@ -115,3 +117,45 @@ function triggerPanic() {
     alert("Geolocation not supported.");
   }
 }
+
+// --- Autocomplete logic for address fields ---
+function setupAutocomplete(inputId, suggestionsId) {
+  const input = document.getElementById(inputId);
+  const suggestions = document.getElementById(suggestionsId);
+
+  input.addEventListener('input', function() {
+    const query = input.value.trim();
+    if (query.length < 3) {
+      suggestions.innerHTML = '';
+      return;
+    }
+    // Restrict search to South Africa using countrycodes=za
+    fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&countrycodes=za`)
+      .then(res => res.json())
+      .then(data => {
+        suggestions.innerHTML = '';
+        data.forEach(place => {
+          const div = document.createElement('div');
+          div.className = 'suggestion';
+          div.textContent = place.display_name;
+          div.onclick = () => {
+            input.value = place.display_name;
+            suggestions.innerHTML = '';
+          };
+          suggestions.appendChild(div);
+        });
+      });
+  });
+
+  // Hide suggestions when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!suggestions.contains(e.target) && e.target !== input) {
+      suggestions.innerHTML = '';
+    }
+  });
+}
+
+setTimeout(() => {
+  setupAutocomplete('start-address', 'start-suggestions');
+  setupAutocomplete('end-address', 'end-suggestions');
+}, 0);
