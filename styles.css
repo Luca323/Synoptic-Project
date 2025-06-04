@@ -1,0 +1,68 @@
+/* Base page styling */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 16px;
+  background-color: #f8f9fa;
+  color: #333;
+}
+
+/* App container */
+#app {
+  max-width: 600px;
+  margin: auto;
+}
+
+/* Map container */
+#map {
+  height: 300px;
+  width: 100%;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+/* Feedback button section */
+#feedback-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+#feedback-buttons button {
+  flex: 1 1 45%;
+  padding: 10px;
+  background-color: #007bff;
+  color: white;
+  font-size: 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+#feedback-buttons button:hover {
+  background-color: #0056b3;
+}
+
+/* Panic button */
+#panic-button {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background-color: red;
+  color: white;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: bold;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 999;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+#panic-button:hover {
+  background-color: darkred;
+}

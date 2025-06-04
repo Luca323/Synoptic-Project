@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>SafeRoute – Map</title>
+
+  <!-- Leaflet CSS -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-o9N1jrv0RZTnK1G1BTnReVfUAr4lC0Q3nVZtJbDgFhE="
+    crossorigin=""
+  />
+
+  <!-- External Stylesheet -->
+  <link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+  <div id="app">
+    <h2>Your Safe Route</h2>
+    <div id="map"></div>
+
+    <h3>Live Feedback</h3>
+    <div id="feedback-buttons">
+      <button onclick="submitFeedback('crime')">⚠️ Crime</button>
+      <button onclick="submitFeedback('lighting')">🔦 Poor Lighting</button>
+      <button onclick="submitFeedback('pothole')">🕳️ Pothole</button>
+      <button onclick="submitFeedback('safe')">✅ Safe Area</button>
+    </div>
+
+    <button id="panic-button" onclick="triggerPanic()">🚨 Panic</button>
+  </div>
+
+  <!-- Leaflet JS -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-oR13TnNToF0MMPnCPVsF7KHf1ulLzLk6qF1U4YZ3y5w="
+    crossorigin=""
+  ></script>
+
+  <!-- Your page JS -->
+  <script src="js/map.js"></script>
+</body>
+</html>
