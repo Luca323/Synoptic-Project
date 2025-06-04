@@ -66,3 +66,16 @@ body {
 #panic-button:hover {
   background-color: darkred;
 }
+
+#location-inputs {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+#location-inputs input,
+#location-inputs button {
+  padding: 10px;
+  font-size: 16px;
+}
