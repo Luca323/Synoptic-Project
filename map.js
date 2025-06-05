@@ -35,6 +35,17 @@ const southWest = L.latLng(-26.33, 27.95);
 const northEast = L.latLng(-26.05, 28.20);
 const joburgBounds = L.latLngBounds(southWest, northEast);
 
+const reportedIssues = []; // [{ latlng: [lat, lng], type: 'crime' }]
+// Test Data
+reportedIssues.push(
+  { latlng: [-26.1915, 28.0680], type: 'crime' },      // near Makers Valley
+  { latlng: [-26.1922, 28.0715], type: 'lighting' },   // another nearby point
+  { latlng: [-26.1950, 28.0650], type: 'pothole' }     // slightly west
+);
+
+
+
+
 setTimeout(() => {
   map = L.map('map', {
     maxBounds: joburgBounds,
@@ -47,25 +58,30 @@ setTimeout(() => {
     attribution: '&copy; OpenStreetMap contributors',
   }).addTo(map);
 
-  setupAutocomplete('start-address', 'start-suggestions');
-  setupAutocomplete('end-address', 'end-suggestions');
+  //setupAutocomplete('start-address', 'start-suggestions');
+  //setupAutocomplete('end-address', 'end-suggestions');
 }, 0);
 
-// Geocoding helper
 function geocodeAddress(address, callback) {
-  const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
+  const apiKey = "5b3ce3597851110001cf6248837f3145429a4ad1aabe11c432e8d7ae"; // use your ORS key
+  const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(address)}&boundary.country=ZA&size=5`;
+
   fetch(url)
     .then(res => res.json())
     .then(data => {
-      if (data.length > 0) {
-        const { lat, lon } = data[0];
-        callback([parseFloat(lat), parseFloat(lon)]);
+      if (data.features.length > 0) {
+        const coords = data.features[0].geometry.coordinates;
+        callback([coords[1], coords[0]]); // [lat, lng]
       } else {
         alert(`No results found for: ${address}`);
       }
     })
-    .catch(() => alert('Geocoding failed.'));
+    .catch(err => {
+      console.error(err);
+      alert('Geocoding failed (ORS).');
+    });
 }
+
 
 // Route fetcher using ORS
 function drawRouteWithORS(startCoords, endCoords, mode) {
@@ -75,18 +91,66 @@ function drawRouteWithORS(startCoords, endCoords, mode) {
   fetch(url)
     .then(res => res.json())
     .then(data => {
+      if (!data.features || data.features.length === 0) {
+        alert("No route found from OpenRouteService.");
+        return;
+      }
+
       const coords = data.features[0].geometry.coordinates.map(coord => [coord[1], coord[0]]);
 
-      if (routeLine) map.removeLayer(routeLine);
-      routeLine = L.polyline(coords, { color: 'green', weight: 5 }).addTo(map);
+      if (!coords || coords.length < 2) {
+        alert("Route data is incomplete.");
+        return;
+      }
 
+
+      // Draw segment-by-segment with appropriate color
+      for (let i = 0; i < coords.length - 1; i++) {
+        const p1 = coords[i];
+        const p2 = coords[i + 1];
+
+        const isUnsafe = reportedIssues.some(issue => {
+          const midpoint = [
+            (p1[0] + p2[0]) / 2,
+            (p1[1] + p2[1]) / 2
+          ];
+          return map.distance(midpoint, issue.latlng) < 50;
+        });
+
+        L.polyline([p1, p2], {
+          color: isUnsafe ? 'red' : 'green',
+          weight: 5,
+          opacity: 0.9
+        }).addTo(map);
+      }
+
+
+      // Add start/end markers
       if (startMarker) map.removeLayer(startMarker);
       if (endMarker) map.removeLayer(endMarker);
 
       startMarker = L.marker(startCoords).addTo(map).bindPopup('Start').openPopup();
       endMarker = L.marker(endCoords).addTo(map).bindPopup('End').openPopup();
 
-      map.fitBounds(routeLine.getBounds());
+      map.fitBounds(L.polyline(coords).getBounds());
+
+      //map.fitBounds(routeLine.getBounds());
+      // Warn if near any reported issues
+      let dangerFound = false;
+      for (let i = 0; i < coords.length; i++) {
+        for (let issue of reportedIssues) {
+          const dist = map.distance(coords[i], issue.latlng);
+            if (dist < 50) { 
+            dangerFound = true;
+            break;
+          }
+        }
+        if (dangerFound) break;
+      }
+
+      if (dangerFound) {
+        alert("Warning: This route passes through a reported unsafe area!");
+      }
     })
     .catch((err) => {
       console.error("Routing error:", err);
@@ -112,10 +176,17 @@ function geocodeAndDrawRoute() {
   });
 }
 
-// Feedback
+// Gather feedback from the user to later assign to the map itself
 function submitFeedback(type) {
-  alert(`Feedback submitted: ${type}`);
+  const center = map.getCenter(); // or from user click later
+  reportedIssues.push({ latlng: [center.lat, center.lng], type });
+
+  L.marker(center)
+    .addTo(map)
+    .bindPopup(`⚠️ Reported: ${type}`)
+    .openPopup();
 }
+
 
 // Panic button
 function triggerPanic() {
@@ -129,7 +200,7 @@ function triggerPanic() {
     alert("Geolocation not supported.");
   }
 }
-
+/*
 // --- Autocomplete logic for address fields ---
 function setupAutocomplete(inputId, suggestionsId) {
   const input = document.getElementById(inputId);
@@ -141,6 +212,7 @@ function setupAutocomplete(inputId, suggestionsId) {
       suggestions.innerHTML = '';
       return;
     }
+    
     // Restrict search to South Africa using countrycodes=za
     fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&countrycodes=za`)
       .then(res => res.json())
@@ -170,4 +242,4 @@ function setupAutocomplete(inputId, suggestionsId) {
 setTimeout(() => {
   setupAutocomplete('start-address', 'start-suggestions');
   setupAutocomplete('end-address', 'end-suggestions');
-}, 0);
+}, 0);*/
