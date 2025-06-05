@@ -47,8 +47,8 @@ setTimeout(() => {
     attribution: '&copy; OpenStreetMap contributors',
   }).addTo(map);
 
-  setupAutocomplete('start-address', 'start-suggestions');
-  setupAutocomplete('end-address', 'end-suggestions');
+  //setupAutocomplete('start-address', 'start-suggestions');
+  //setupAutocomplete('end-address', 'end-suggestions');
 }, 0);
 
 // Geocoding helper
@@ -114,7 +114,36 @@ function geocodeAndDrawRoute() {
 
 // Feedback
 function submitFeedback(type) {
-  alert(`Feedback submitted: ${type}`);
+  if (!navigator.geolocation) {
+    alert("Geolocation not supported.");
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition((position) => {
+    const feedback = {
+      type,
+      lat: position.coords.latitude,
+      lon: position.coords.longitude,
+      timestamp: new Date().toISOString()
+    };
+
+    // Load existing feedbacks
+    const existing = JSON.parse(localStorage.getItem("feedbacks") || "[]");
+
+    // Add new feedback
+    existing.push(feedback);
+
+    // Save updated feedbacks
+    localStorage.setItem("feedbacks", JSON.stringify(existing));
+
+    alert(`✅ Feedback submitted: ${type}`);
+    L.marker([feedback.lat, feedback.lon])
+      .addTo(map)
+      .bindPopup(`${type} reported here`)
+      .openPopup();
+  }, () => {
+    alert("❌ Could not get your location.");
+  });
 }
 
 // Panic button
@@ -129,7 +158,7 @@ function triggerPanic() {
     alert("Geolocation not supported.");
   }
 }
-
+/*
 // --- Autocomplete logic for address fields ---
 function setupAutocomplete(inputId, suggestionsId) {
   const input = document.getElementById(inputId);
@@ -170,4 +199,4 @@ function setupAutocomplete(inputId, suggestionsId) {
 setTimeout(() => {
   setupAutocomplete('start-address', 'start-suggestions');
   setupAutocomplete('end-address', 'end-suggestions');
-}, 0);
+}, 0); */
