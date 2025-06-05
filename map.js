@@ -178,13 +178,36 @@ function geocodeAndDrawRoute() {
 
 // Gather feedback from the user to later assign to the map itself
 function submitFeedback(type) {
-  const center = map.getCenter(); // or from user click later
-  reportedIssues.push({ latlng: [center.lat, center.lng], type });
+  if (!navigator.geolocation) {
+    alert("Geolocation not supported.");
+    return;
+  }
 
-  L.marker(center)
-    .addTo(map)
-    .bindPopup(`⚠️ Reported: ${type}`)
-    .openPopup();
+  navigator.geolocation.getCurrentPosition((position) => {
+    const feedback = {
+      type,
+      lat: position.coords.latitude,
+      lon: position.coords.longitude,
+      timestamp: new Date().toISOString()
+    };
+
+    // Load existing feedbacks
+    const existing = JSON.parse(localStorage.getItem("feedbacks") || "[]");
+
+    // Add new feedback
+    existing.push(feedback);
+
+    // Save updated feedbacks
+    localStorage.setItem("feedbacks", JSON.stringify(existing));
+
+    alert(`✅ Feedback submitted: ${type}`);
+    L.marker([feedback.lat, feedback.lon])
+      .addTo(map)
+      .bindPopup(`${type} reported here`)
+      .openPopup();
+  }, () => {
+    alert("❌ Could not get your location.");
+  });
 }
 
 
