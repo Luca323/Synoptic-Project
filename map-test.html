@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Map Test</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div id="map"></div>
+    
+    <!-- Add the panic button and reports table for testing -->
+    <button id="panic-button" onclick="triggerPanic()">🚨 PANIC</button>
+    
+    <!-- Manual Feedback Banner -->
+    <div id="manual-feedback-banner" class="hidden">
+        <div class="banner-header">
+            <h3>Manual Reports & History</h3>
+            <button onclick="toggleManualFeedback()">✕</button>
+        </div>
+        <div class="banner-content">
+            <div class="reports-section">
+                <h4>Recent Reports</h4>
+                <table id="reports-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Location</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reports-tbody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Add a test message to console
+        console.log('Map test loaded');
+        
+        // Initialize minimal required variables
+        let map;
+        let recentReports = [];
+        let dangerZones = [];
+        let zoneMarkers = [];
+
+        // Initialize a basic map
+        document.addEventListener('DOMContentLoaded', function() {
+            map = L.map('map').setView([-26.2041, 28.0473], 11);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            console.log('Map initialized');
+        });
+
+        // Copy the panic button function from map.js
+        function triggerPanic() {
+            console.log('triggerPanic called');
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const { latitude, longitude } = position.coords;
+                    const location = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+                    const time = new Date().toLocaleString();
+                    
+                    // Add panic report to recent reports
+                    recentReports.unshift({ 
+                        type: 'panic', 
+                        location: location, 
+                        time: time 
+                    });
+                    if (recentReports.length > 10) recentReports.pop();
+                    
+                    // Create an urgent danger zone for panic reports (simplified for test)
+                    console.log('Adding danger zone at:', latitude, longitude);
+                    
+                    // Update the reports table
+                    updateReportsTable();
+                    
+                    // Show urgent alert with emergency options
+                    const emergencyActions = confirm(
+                        `🚨 PANIC ALERT ACTIVATED! 🚨\n\n` +
+                        `Your location has been logged: ${location}\n` +
+                        `Time: ${time}\n\n` +
+                        `Emergency services recommended!\n\n` +
+                        `Click OK to get emergency numbers, or Cancel to close this alert.`
+                    );
+                    
+                    if (emergencyActions) {
+                        alert(
+                            `🚨 EMERGENCY CONTACTS 🚨\n\n` +
+                            `🚓 Police: 10111\n` +
+                            `🚑 Ambulance: 10177\n` +
+                            `🔥 Fire Department: 10111\n` +
+                            `📞 Private Security: 10111\n\n` +
+                            `Your panic location has been recorded for safety tracking.`
+                        );
+                    }
+                    
+                    // Flash the panic button to show it was activated
+                    const panicButton = document.getElementById('panic-button');
+                    if (panicButton) {
+                        panicButton.style.animation = 'flash 1s ease-in-out 3';
+                        setTimeout(() => {
+                            panicButton.style.animation = '';
+                        }, 3000);
+                    }
+                    
+                }, (error) => {
+                    console.log('Geolocation error:', error);
+                    // If location access fails, still allow panic report
+                    const time = new Date().toLocaleString();
+                    
+                    recentReports.unshift({ 
+                        type: 'panic', 
+                        location: 'Location unavailable', 
+                        time: time 
+                    });
+                    if (recentReports.length > 10) recentReports.pop();
+                    
+                    updateReportsTable();
+                    
+                    alert(
+                        `🚨 PANIC ALERT ACTIVATED! 🚨\n\n` +
+                        `Time: ${time}\n` +
+                        `Location: Could not determine (enable location services for better tracking)\n\n` +
+                        `🚓 Police: 10111\n` +
+                        `🚑 Ambulance: 10177\n` +
+                        `🔥 Fire Department: 10111`
+                    );
+                });
+            } else {
+                console.log('Geolocation not supported');
+                // Geolocation not supported
+                const time = new Date().toLocaleString();
+                
+                recentReports.unshift({ 
+                    type: 'panic', 
+                    location: 'Location unavailable', 
+                    time: time 
+                });
+                if (recentReports.length > 10) recentReports.pop();
+                
+                updateReportsTable();
+                
+                alert(
+                    `🚨 PANIC ALERT ACTIVATED! 🚨\n\n` +
+                    `Time: ${time}\n` +
+                    `Location: Browser does not support location services\n\n` +
+                    `🚓 Police: 10111\n` +
+                    `🚑 Ambulance: 10177\n` +
+                    `🔥 Fire Department: 10111`
+                );
+            }
+        }
+
+        // Helper functions
+        function getReportEmoji(type) {
+            switch(type) {
+                case 'crime': return '⚠️';
+                case 'lighting': return '🔦';
+                case 'pothole': return '🕳️';
+                case 'safe': return '✅';
+                case 'panic': return '🚨';
+                default: return '📍';
+            }
+        }
+
+        function updateReportsTable() {
+            console.log('updateReportsTable called with reports:', recentReports);
+            const tbody = document.getElementById('reports-tbody');
+            if (!tbody) {
+                console.log('Reports table not found');
+                return;
+            }
+            
+            // Clear existing rows
+            tbody.innerHTML = '';
+            
+            // Add recent reports to table
+            recentReports.forEach(report => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${getReportEmoji(report.type)} ${report.type.charAt(0).toUpperCase() + report.type.slice(1)}</td>
+                    <td>${report.location}</td>
+                    <td>${report.time}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            // If no reports, show a message
+            if (recentReports.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="3" style="text-align: center; font-style: italic;">No reports yet</td>';
+                tbody.appendChild(row);
+            }
+        }
+
+        function toggleManualFeedback() {
+            const banner = document.getElementById('manual-feedback-banner');
+            banner.classList.toggle('hidden');
+        }
+
+        // Test button to show reports table
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 't' || e.key === 'T') {
+                toggleManualFeedback();
+            }
+        });
+    </script>
+</body>
+</html>

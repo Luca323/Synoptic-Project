@@ -11,21 +11,80 @@
   <!-- External Stylesheet -->
   <link rel="stylesheet" href="styles.css" />
 </head>
-<body>
-  <div id="app">
-    <h2>Your Safe Route</h2>
-    <div id="map"></div>
-
-    <h3>Live Feedback</h3>
-    <div id="feedback-buttons">
-      <button onclick="submitFeedback('crime')">⚠️ Crime</button>
-      <button onclick="submitFeedback('lighting')">🔦 Poor Lighting</button>
-      <button onclick="submitFeedback('pothole')">🕳️ Pothole</button>
-      <button onclick="submitFeedback('safe')">✅ Safe Area</button>
+<body>  <div id="map"></div>    <div id="feedback-panel">    
+      <button id="report-button" onclick="toggleReportOptions()">📝</button>
+      <button id="manual-feedback-button" onclick="toggleManualFeedback()">📍</button>
     </div>
 
-    <button id="panic-button" onclick="triggerPanic()">🚨 Panic</button>
-  </div>
+    <!-- Report Options Banner -->
+    <div id="report-options-banner" class="hidden">
+      <div class="banner-header">
+        <h3>Quick Reports</h3>
+        <button onclick="toggleReportOptions()">✕</button>
+      </div>
+      <div class="report-banner-content">
+        <button onclick="submitFeedback('crime')">⚠️ Crime</button>
+        <button onclick="submitFeedback('lighting')">🔦 Poor Lighting</button>
+        <button onclick="submitFeedback('pothole')">🕳️ Pothole</button>
+        <button onclick="submitFeedback('safe')">✅ Safe Area</button>
+      </div>
+    </div>
+
+    <!-- Manual Feedback Banner -->
+    <div id="manual-feedback-banner" class="hidden">
+      <div class="banner-header">
+        <h3>Manual Reports & History</h3>
+        <button onclick="toggleManualFeedback()">✕</button>
+      </div>
+      <div class="banner-content">
+        <div class="manual-report-section">
+          <h4>Report by Address</h4>
+          <input type="text" id="manual-address" placeholder="Enter address for report" />
+          <div class="manual-report-options">
+            <button onclick="submitManualFeedback('crime')">⚠️ Crime</button>
+            <button onclick="submitManualFeedback('lighting')">🔦 Poor Lighting</button>
+            <button onclick="submitManualFeedback('pothole')">🕳️ Pothole</button>
+            <button onclick="submitManualFeedback('safe')">✅ Safe Area</button>
+          </div>
+        </div>
+        <div class="reports-section">
+          <h4>Recent Reports</h4>
+          <table id="reports-table">
+            <thead>
+              <tr>
+                <th>Type</th>
+                <th>Location</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody id="reports-tbody">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <button id="nav-button" onclick="toggleNavPanel()">🧭</button>
+    
+    <div id="nav-panel" class="hidden">
+      <div class="nav-content">
+        <div class="input-group">
+          <input type="text" id="start-address" placeholder="Enter start location" autocomplete="off" />
+          <div id="start-suggestions" class="autocomplete-suggestions"></div>
+        </div>
+        <div class="input-group">
+          <input type="text" id="end-address" placeholder="Enter destination" autocomplete="off" />
+          <div id="end-suggestions" class="autocomplete-suggestions"></div>
+        </div>
+        <div class="controls">
+          <select id="travel-mode">
+            <option value="foot-walking">🚶 Walking</option>
+            <option value="cycling-regular">🚲 Cycling</option>
+          </select>
+          <button onclick="geocodeAndDrawRoute()">Plot Route</button>
+        </div>
+      </div>
+    </div>    <button id="panic-button" onclick="triggerPanic()">🚨 PANIC</button>
 
   <!-- Leaflet JS -->
   <script
