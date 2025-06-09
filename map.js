@@ -50,15 +50,6 @@ const northEast = L.latLng(-26.05, 28.20);
 const joburgBounds = L.latLngBounds(southWest, northEast);
 
 const reportedIssues = []; //[{ latlng: [lat, lng], type: 'crime' }]
-//Test Data
-reportedIssues.push(
-  { latlng: [-26.1915, 28.0680], type: 'crime' },      //near Makers Valley
-  { latlng: [-26.1922, 28.0715], type: 'lighting' },   //another nearby point
-  { latlng: [-26.1950, 28.0650], type: 'pothole' }     //slightly west
-);
-
-
-
 
 setTimeout(() => {
   map = L.map('map', {
@@ -101,12 +92,13 @@ function geocodeAddress(address, callback) {
 function drawRouteWithORS(startCoords, endCoords, mode) {
   const apiKey = "5b3ce3597851110001cf6248837f3145429a4ad1aabe11c432e8d7ae";
 
-  // Build avoid polygons GeoJSON from dangerAreas
+  // Build avoid polygons GeoJSON from dangerAreas, but exclude 'safe' areas
   let avoidPolygons = null;
-  if (dangerAreas.length > 0) {
+  const avoidAreas = dangerAreas.filter(area => area.type !== 'safe');
+  if (avoidAreas.length > 0) {
     avoidPolygons = {
       type: "MultiPolygon",
-      coordinates: dangerAreas.map(area => [[
+      coordinates: avoidAreas.map(area => [[
         [area.minLon, area.minLat],
         [area.maxLon, area.minLat],
         [area.maxLon, area.maxLat],
@@ -484,8 +476,9 @@ function drawDangerBoxes() {
   dangerBoxes = [];
   dangerAreas.forEach(area => {
     const bounds = [[area.minLat, area.minLon], [area.maxLat, area.maxLon]];
+    const isSafe = area.type === 'safe';
     const rectangle = L.rectangle(bounds, {
-      color: 'red',
+      color: isSafe ? 'green' : 'red',
       weight: 2,
       fillOpacity: 0.4
     }).addTo(map);
