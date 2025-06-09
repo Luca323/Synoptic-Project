@@ -49,12 +49,12 @@ const southWest = L.latLng(-26.33, 27.95);
 const northEast = L.latLng(-26.05, 28.20);
 const joburgBounds = L.latLngBounds(southWest, northEast);
 
-const reportedIssues = []; // [{ latlng: [lat, lng], type: 'crime' }]
-// Test Data
+const reportedIssues = []; //[{ latlng: [lat, lng], type: 'crime' }]
+//Test Data
 reportedIssues.push(
-  { latlng: [-26.1915, 28.0680], type: 'crime' },      // near Makers Valley
-  { latlng: [-26.1922, 28.0715], type: 'lighting' },   // another nearby point
-  { latlng: [-26.1950, 28.0650], type: 'pothole' }     // slightly west
+  { latlng: [-26.1915, 28.0680], type: 'crime' },      //near Makers Valley
+  { latlng: [-26.1922, 28.0715], type: 'lighting' },   //another nearby point
+  { latlng: [-26.1950, 28.0650], type: 'pothole' }     //slightly west
 );
 
 
@@ -66,7 +66,7 @@ setTimeout(() => {
     maxBoundsViscosity: 1.0,
     minZoom: 11,
     maxZoom: 18,
-  }).setView([-26.1951, 28.0697], 13); // Center on Makers Valley
+  }).setView([-26.1951, 28.0697], 13); //Center on Makers Valley
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     attribution: '&copy; OpenStreetMap contributors',
@@ -77,7 +77,7 @@ setTimeout(() => {
 }, 0);
 
 function geocodeAddress(address, callback) {
-  const apiKey = "5b3ce3597851110001cf6248837f3145429a4ad1aabe11c432e8d7ae"; // use your ORS key
+  const apiKey = "5b3ce3597851110001cf6248837f3145429a4ad1aabe11c432e8d7ae"; //use your ORS key
   const url = `https://api.openrouteservice.org/geocode/search?api_key=${apiKey}&text=${encodeURIComponent(address)}&boundary.country=ZA&size=5`;
 
   fetch(url)
