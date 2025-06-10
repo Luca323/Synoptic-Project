@@ -27,15 +27,17 @@ function setupAutocomplete(inputId, suggestionsId) {
     const input = document.getElementById(inputId);
     const suggestions = document.getElementById(suggestionsId);
     let currentFetchId = 0;
-    input.addEventListener('input', function() {
+    let debounceTimeout = null;
+
+    input.addEventListener('input', function () {
         const query = input.value.trim();
-        if (query.length < 1) {
+        if (query.length < 2) {
             suggestions.innerHTML = '';
             return;
         }
         suggestions.innerHTML = '<div class="suggestion">Loading...</div>';
         const fetchId = ++currentFetchId;
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Johannesburg, South Africa')}&addressdetails=1&limit=5&countrycodes=za`)
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&countrycodes=za&viewbox=27.95,-26.05,28.20,-26.33&bounded=1`)
             .then(res => res.json())
             .then(data => {
                 if (fetchId !== currentFetchId) return;
@@ -56,14 +58,12 @@ function setupAutocomplete(inputId, suggestionsId) {
                     };
                     suggestions.appendChild(div);
                 });
-            })
-            .catch(() => {
-                suggestions.innerHTML = '<div class="suggestion">Error loading suggestions</div>';
-            });
-    });    // Store reference to avoid multiple listeners
+        }, 300); // 300ms debounce
+    });
+
     if (!input.hasClickListener) {
         input.hasClickListener = true;
-        document.addEventListener('click', function(e) {
+        document.addEventListener('click', function (e) {
             if (!suggestions.contains(e.target) && e.target !== input) {
                 suggestions.innerHTML = '';
             }
