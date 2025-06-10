@@ -144,55 +144,48 @@ async function geocodeAndDrawRoute() {
     const startInput = document.getElementById('start-address');
     const endInput = document.getElementById('end-address');
     const travelMode = document.getElementById('travel-mode').value;
+
     if (!startInput.value || !endInput.value) {
         alert('Please enter both start and destination addresses');
         return;
     }
-    // Show loading state
+
     const plotBtn = document.querySelector('.controls button');
     if (plotBtn) plotBtn.textContent = 'Loading...';
+
     try {
-        // Geocode using selected suggestion if available
         const getCoords = async (input) => {
-            if (input.selectedPlace && input.selectedPlace.lat && input.selectedPlace.lon) {
+            if (input.selectedPlace?.lat && input.selectedPlace?.lon) {
                 return [parseFloat(input.selectedPlace.lat), parseFloat(input.selectedPlace.lon)];
             } else {
                 return await geocodeAddress(input.value);
             }
         };
+
         const [startCoords, endCoords] = await Promise.all([
             getCoords(startInput),
             getCoords(endInput)
         ]);
-        // Clear existing route
-        if (routePolylines.length > 0) {
-            routePolylines.forEach(line => line.remove());
-            routePolylines = [];
-        }
+
+        // Clear old route & markers
+        routePolylines.forEach(line => line.remove());
+        routePolylines = [];
         if (startMarker) startMarker.remove();
         if (endMarker) endMarker.remove();
         if (currentRouteSummary) currentRouteSummary.remove();
-        // Add markers
+
+        // Add start/end markers
         startMarker = L.marker(startCoords, {
-            icon: L.divIcon({
-                className: 'custom-div-icon',
-                html: '🟢',
-                iconSize: [30, 30],
-                iconAnchor: [15, 15]
-            })
+            icon: L.divIcon({ className: 'custom-div-icon', html: '🟢', iconSize: [30, 30], iconAnchor: [15, 15] })
         }).addTo(map);
+
         endMarker = L.marker(endCoords, {
-            icon: L.divIcon({
-                className: 'custom-div-icon',
-                html: '📍',
-                iconSize: [30, 30],
-                iconAnchor: [15, 30]
-            })        }).addTo(map);
-        
-        // Get the route with danger zone avoidance
+            icon: L.divIcon({ className: 'custom-div-icon', html: '📍', iconSize: [30, 30], iconAnchor: [15, 30] })
+        }).addTo(map);
+
+        // Prepare ORS API call
         const url = `https://api.openrouteservice.org/v2/directions/${travelMode}/geojson`;
-        
-        // Prepare request body with avoid areas (red zones)
+
         const requestBody = {
             coordinates: [
                 [startCoords[1], startCoords[0]],
@@ -204,108 +197,80 @@ async function geocodeAndDrawRoute() {
             continue_straight: false,
             maneuvers: true
         };
-        
-        // Check for red danger zones and try to avoid them
-        const redZones = dangerZones.filter(zone => zone.status === 'red');
-        let routeData = null;
-        let avoidedDanger = false;
 
-        //   if (redZones.length > 0) {
-        //     // Try to create a route with waypoints that avoid danger zones
-        //     const avoidanceRoute = await tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode);
-        //     if (avoidanceRoute && avoidanceRoute.success) {
-        //         routeData = avoidanceRoute.data;
-        //         avoidedDanger = true;
-        //     }
+        // Add avoid_polygons for red zones
+        const redZones = dangerZones.filter(zone => zone.status === 'red');
 
         if (redZones.length > 0) {
-        // Construct avoid_polygons from red zones
-        const polygons = redZones.map(zone => {
-            return {
+            const polygons = redZones.map(zone => ({
                 type: "Polygon",
-                coordinates: [redZones] // Assuming zone.coordinates is an array of [lng, lat] and is closed
+                coordinates: [createCircleCoordinates(zone.lat, zone.lon, 400)]
+            }));
+
+            const multiPolygonCoords = redZones.map(zone =>
+            [createCircleCoordinates(zone.lat, zone.lon, 400)] // array of 1 polygon = [[...]]
+            );
+
+            requestBody.options = {
+                avoid_polygons: {
+                    type: "MultiPolygon",
+                    coordinates: multiPolygonCoords
+                }
             };
+        }
+        // Fetch route
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': ORS_API_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestBody)
         });
 
-        requestBody.options = {
-            avoid_polygons: {
-                type: "GeometryCollection",
-                geometries: polygons
-            }
-        };
-
-        // Try to create a route with danger zones avoided
-        const avoidanceRoute = await tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode, requestBody);
-        if (avoidanceRoute && avoidanceRoute.success) {
-            routeData = avoidanceRoute.data;
-            avoidedDanger = true;
-        }
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('ORS API Error:', errorText);
+            throw new Error('Failed to fetch route: ' + errorText);
         }
 
+        const data = await response.json();
 
-
-    
-        
-        // If no danger zones or avoidance failed, get direct route
-        if (!routeData) {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Authorization': ORS_API_KEY,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(requestBody)
-            });
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('API Error:', errorText);
-                throw new Error('Failed to fetch route: ' + errorText);
-            }
-            routeData = await response.json();
-        }
-        
-        const data = routeData;        
-        if (data.features && data.features.length > 0) {
-            const route = data.features[0];
-            const coords = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
-            
-            // Determine route color and warning based on danger zone avoidance
-            let routeWarning = '';
-            let routeColor = 'green';
-            
-            if (avoidedDanger) {
-                routeColor = 'blue'; // Blue for successful avoidance route
-                routeWarning = ' 🛡️ Route adjusted to avoid danger zones!';
-            } else if (redZones.length > 0) {
-                // Check if direct route passes through red danger zones
-                const dangerousRoute = coords.some(coord => {
-                    return redZones.some(zone => {
-                        const distance = calculateDistance(coord[0], coord[1], zone.lat, zone.lon);
-                        return distance <= 300; // Within 300m of a red zone
-                    });
-                });
-                
-                if (dangerousRoute) {
-                    routeColor = 'orange';
-                    routeWarning = ' ⚠️ Route may pass near danger zones!';
-                }
-            }
-            
-            const routeLine = L.polyline(coords, {
-                color: routeColor,
-                weight: 6,
-                opacity: 0.8
-            }).addTo(map);
-            routePolylines.push(routeLine);
-            map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
-            document.getElementById('nav-panel').classList.add('hidden');            // Show route summary as a visible banner
-            const distance = (route.properties.segments[0].distance / 1000).toFixed(2);
-            const duration = Math.round(route.properties.segments[0].duration / 60);
-            showRouteBanner(distance, duration, travelMode, routeWarning, route);
-        } else {
+        if (!data.features || data.features.length === 0) {
             alert('No route found.');
             hideRouteBanner();
+            return;
         }
+
+        const route = data.features[0];
+        const coords = route.geometry.coordinates.map(coord => [coord[1], coord[0]]); // [lat, lng]
+
+        // Determine if the route is still near red zones
+        const stillDangerous = coords.some(coord =>
+            redZones.some(zone =>
+                calculateDistance(coord[0], coord[1], zone.lat, zone.lon) <= 250
+            )
+        );
+
+        const routeColor = stillDangerous ? 'orange' : (redZones.length > 0 ? 'blue' : 'green');
+        const warningMsg = stillDangerous
+            ? ' ⚠️ Route may pass near danger zones!'
+            : (redZones.length > 0 ? ' 🛡️ Route adjusted to avoid danger zones!' : '');
+
+        const routeLine = L.polyline(coords, {
+            color: routeColor,
+            weight: 6,
+            opacity: 0.8
+        }).addTo(map);
+
+        routePolylines.push(routeLine);
+        map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+        document.getElementById('nav-panel').classList.add('hidden');
+
+        const distance = (route.properties.segments[0].distance / 1000).toFixed(2);
+        const duration = Math.round(route.properties.segments[0].duration / 60);
+        showRouteBanner(distance, duration, travelMode, warningMsg, route);
+
     } catch (error) {
         alert('Error plotting route: ' + error.message);
         hideRouteBanner();
@@ -313,6 +278,7 @@ async function geocodeAndDrawRoute() {
         if (plotBtn) plotBtn.textContent = 'Plot Route';
     }
 }
+
 
 // Show route summary as a visible banner at the bottom center
 function showRouteBanner(distance, duration, travelMode, warning = '', route = null) {
