@@ -779,7 +779,7 @@ async function tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode)
             const stillDangerous = coords.some(coord => {
                 return redZones.some(zone => {
                     const distance = calculateDistance(coord[0], coord[1], zone.lat, zone.lon);
-                    return distance <= 200; // Must be at least 200m away from danger zones
+                    return distance <= 200; //Must be at least 200m away from danger zones
                 });
             });
               if (stillDangerous) {
