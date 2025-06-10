@@ -198,6 +198,7 @@ async function geocodeAndDrawRoute() {
             maneuvers: true
         };
 
+<<<<<<< HEAD
         // Add avoid_polygons for red zones
         const redZones = dangerZones.filter(zone => zone.status === 'red');
 
@@ -237,6 +238,115 @@ async function geocodeAndDrawRoute() {
         const data = await response.json();
 
         if (!data.features || data.features.length === 0) {
+=======
+        if (redZones.length > 0) {
+        // Construct avoid_polygons from red zones
+            // const polygons = redZones.map(zone => {
+            //     return {
+            //         type: "Polygon",
+            //         // coordinates: [redZones] // Assuming zone.coordinates is an array of [lng, lat] and is closed
+            //         coordinates: [redZones.map(coord => [coord.lng, coord.lat])]
+            //     };
+            // });
+
+
+            const polygons = redZones.map(zone => {
+                const coords = createSquarePolygonWithRadius(zone.lat, zone.lng, 500);
+                return {
+                    type: "Polygon",
+                    coordinates: [coords]
+                };
+            });
+
+            requestBody.options = {
+                avoid_polygons: {
+                    type: "GeometryCollection",
+                    geometries: polygons
+                }
+            };
+
+            // const multiPolygonCoords = redZones.map(zone => {
+            //     const ring = createSquarePolygonWithRadius(zone.lat, zone.lng, 500); // radius = 500
+            //     return [ring]; // Each polygon is a list of rings; here we have one outer ring
+            // });
+
+            // requestBody.options = {
+            //     avoid_polygons: {
+            //         type: "MultiPolygon",
+            //         coordinates: multiPolygonCoords
+            //     }
+            // };
+
+            // Try to create a route with danger zones avoided
+            const avoidanceRoute = await tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode, requestBody);
+            if (avoidanceRoute && avoidanceRoute.success) {
+                routeData = avoidanceRoute.data;
+                avoidedDanger = true;
+            }
+    
+
+
+
+        }
+        
+        // If no danger zones or avoidance failed, get direct route
+        if (!routeData) {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': ORS_API_KEY,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestBody)
+            });
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API Error:', errorText);
+                throw new Error('Failed to fetch route: ' + errorText);
+            }
+            routeData = await response.json();
+        }
+        
+        const data = routeData;        
+        if (data.features && data.features.length > 0) {
+            const route = data.features[0];
+            const coords = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
+            
+            // Determine route color and warning based on danger zone avoidance
+            let routeWarning = '';
+            let routeColor = 'green';
+            
+            if (avoidedDanger) {
+                routeColor = 'blue'; // Blue for successful avoidance route
+                routeWarning = ' 🛡️ Route adjusted to avoid danger zones!';
+            } else if (redZones.length > 0) {
+                // Check if direct route passes through red danger zones
+                const dangerousRoute = coords.some(coord => {
+                    return redZones.some(zone => {
+                        const distance = calculateDistance(coord[0], coord[1], zone.lat, zone.lon);
+                        return distance <= 300; // Within 300m of a red zone
+                    });
+                });
+                
+                if (dangerousRoute) {
+                    routeColor = 'orange';
+                    routeWarning = ' ⚠️ Route may pass near danger zones!';
+                }
+            }
+            
+            const routeLine = L.polyline(coords, {
+                color: routeColor,
+                weight: 6,
+                opacity: 0.8
+            }).addTo(map);
+            routePolylines.push(routeLine);
+            map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+            document.getElementById('nav-panel').classList.add('hidden');            // Show route summary as a visible banner
+            const distance = (route.properties.segments[0].distance / 1000).toFixed(2);
+            const duration = Math.round(route.properties.segments[0].duration / 60);
+            showRouteBanner(distance, duration, travelMode, routeWarning, route);
+        } else {
+>>>>>>> aec83ce41d957808432ce80b479836fa5993cdf8
             alert('No route found.');
             hideRouteBanner();
             return;
@@ -279,6 +389,34 @@ async function geocodeAndDrawRoute() {
     }
 }
 
+<<<<<<< HEAD
+=======
+// Create a polygon around a redzone
+function createSquarePolygonWithRadius(lat, lon, radiusMeters) {
+    const latDegreesPerMeter = 1 / 111139; // approx. meters per degree latitude
+    const lonDegreesPerMeter = 1 / (111139 * Math.cos(lat * Math.PI / 180)); // meters per degree longitude at given latitude
+
+    const halfSideLat = radiusMeters * latDegreesPerMeter;
+    const halfSideLon = radiusMeters * lonDegreesPerMeter;
+
+    const southWest = [lon - halfSideLon, lat - halfSideLat];
+    const southEast = [lon + halfSideLon, lat - halfSideLat];
+    const northEast = [lon + halfSideLon, lat + halfSideLat];
+    const northWest = [lon - halfSideLon, lat + halfSideLat];
+
+    return {
+        type: "Polygon",
+        coordinates: [[
+            southWest,
+            southEast,
+            northEast,
+            northWest,
+            southWest // Close the ring
+        ]]
+    };
+}
+
+>>>>>>> aec83ce41d957808432ce80b479836fa5993cdf8
 
 // Show route summary as a visible banner at the bottom center
 function showRouteBanner(distance, duration, travelMode, warning = '', route = null) {
@@ -302,6 +440,7 @@ function showRouteBanner(distance, duration, travelMode, warning = '', route = n
     document.getElementById('close-route-banner').onclick = hideRouteBanner;
     document.getElementById('show-directions-btn').onclick = () => showDirections(route);
 }
+
 function hideRouteBanner() {
     const banner = document.getElementById('route-banner');
     if (banner) banner.style.display = 'none';
