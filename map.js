@@ -209,14 +209,42 @@ async function geocodeAndDrawRoute() {
         const redZones = dangerZones.filter(zone => zone.status === 'red');
         let routeData = null;
         let avoidedDanger = false;
-          if (redZones.length > 0) {
-            // Try to create a route with waypoints that avoid danger zones
-            const avoidanceRoute = await tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode);
-            if (avoidanceRoute && avoidanceRoute.success) {
-                routeData = avoidanceRoute.data;
-                avoidedDanger = true;
+
+        //   if (redZones.length > 0) {
+        //     // Try to create a route with waypoints that avoid danger zones
+        //     const avoidanceRoute = await tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode);
+        //     if (avoidanceRoute && avoidanceRoute.success) {
+        //         routeData = avoidanceRoute.data;
+        //         avoidedDanger = true;
+        //     }
+
+        if (redZones.length > 0) {
+        // Construct avoid_polygons from red zones
+        const polygons = redZones.map(zone => {
+            return {
+                type: "Polygon",
+                coordinates: [redZones] // Assuming zone.coordinates is an array of [lng, lat] and is closed
+            };
+        });
+
+        requestBody.options = {
+            avoid_polygons: {
+                type: "GeometryCollection",
+                geometries: polygons
             }
+        };
+
+        // Try to create a route with danger zones avoided
+        const avoidanceRoute = await tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode, requestBody);
+        if (avoidanceRoute && avoidanceRoute.success) {
+            routeData = avoidanceRoute.data;
+            avoidedDanger = true;
         }
+        }
+
+
+
+    
         
         // If no danger zones or avoidance failed, get direct route
         if (!routeData) {
@@ -236,7 +264,8 @@ async function geocodeAndDrawRoute() {
             routeData = await response.json();
         }
         
-        const data = routeData;        if (data.features && data.features.length > 0) {
+        const data = routeData;        
+        if (data.features && data.features.length > 0) {
             const route = data.features[0];
             const coords = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
             
