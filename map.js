@@ -35,50 +35,28 @@ function setupAutocomplete(inputId, suggestionsId) {
             suggestions.innerHTML = '';
             return;
         }
-
-        // Debounce: wait 300ms after typing stops
-        clearTimeout(debounceTimeout);
-        debounceTimeout = setTimeout(() => {
-            suggestions.innerHTML = '<div class="suggestion">Loading...</div>';
-            const fetchId = ++currentFetchId;
-
-            // Johannesburg bounding box: [minLon, minLat, maxLon, maxLat]
-            const bbox = [27.9, -26.4, 28.3, -26.0]; // Roughly around Johannesburg
-            const url = `https://nominatim.openstreetmap.org/search?` +
-                `format=json&` +
-                `q=${encodeURIComponent(query)}&` +
-                `addressdetails=1&limit=5&bounded=1&countrycodes=za&` +
-                `viewbox=${bbox.join(',')}`;
-
-            fetch(url)
-                .then(res => res.json())
-                .then(data => {
-                    if (fetchId !== currentFetchId) return;
-                    suggestions.innerHTML = '';
-                    if (!data.length) {
-                        suggestions.innerHTML = '<div class="suggestion">No results</div>';
-                        return;
-                    }
-
-                    data.forEach(place => {
-                        const div = document.createElement('div');
-                        div.className = 'suggestion';
-
-                        // Simplify display name
-                        const parts = place.display_name.split(',');
-                        div.textContent = parts.slice(0, 2).join(', ').trim();
-
-                        div.onclick = () => {
-                            input.value = place.display_name;
-                            input.selectedPlace = place;
-                            suggestions.innerHTML = '';
-                        };
-
-                        suggestions.appendChild(div);
-                    });
-                })
-                .catch(() => {
-                    suggestions.innerHTML = '<div class="suggestion">Error loading suggestions</div>';
+        suggestions.innerHTML = '<div class="suggestion">Loading...</div>';
+        const fetchId = ++currentFetchId;
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&countrycodes=za&viewbox=27.95,-26.05,28.20,-26.33&bounded=1`)
+            .then(res => res.json())
+            .then(data => {
+                if (fetchId !== currentFetchId) return;
+                suggestions.innerHTML = '';
+                if (!data.length) {
+                    suggestions.innerHTML = '<div class="suggestion">No results</div>';
+                    return;
+                }
+                data.forEach(place => {
+                    const div = document.createElement('div');
+                    div.className = 'suggestion';
+                    div.textContent = place.display_name;
+                    div.onclick = () => {
+                        input.value = place.display_name;
+                        input.selectedPlace = place;
+                        suggestions.innerHTML = '';
+                        // Do NOT close the nav panel here!
+                    };
+                    suggestions.appendChild(div);
                 });
         }, 300); // 300ms debounce
     });
