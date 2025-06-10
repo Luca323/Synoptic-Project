@@ -35,7 +35,7 @@ function setupAutocomplete(inputId, suggestionsId) {
         }
         suggestions.innerHTML = '<div class="suggestion">Loading...</div>';
         const fetchId = ++currentFetchId;
-        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Johannesburg, South Africa')}&addressdetails=1&limit=5&countrycodes=za`)
+        fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&countrycodes=za&viewbox=27.95,-26.05,28.20,-26.33&bounded=1`)
             .then(res => res.json())
             .then(data => {
                 if (fetchId !== currentFetchId) return;
