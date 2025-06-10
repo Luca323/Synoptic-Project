@@ -210,41 +210,55 @@ async function geocodeAndDrawRoute() {
         let routeData = null;
         let avoidedDanger = false;
 
-        //   if (redZones.length > 0) {
-        //     // Try to create a route with waypoints that avoid danger zones
-        //     const avoidanceRoute = await tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode);
-        //     if (avoidanceRoute && avoidanceRoute.success) {
-        //         routeData = avoidanceRoute.data;
-        //         avoidedDanger = true;
-        //     }
-
         if (redZones.length > 0) {
         // Construct avoid_polygons from red zones
-        const polygons = redZones.map(zone => {
-            return {
-                type: "Polygon",
-                coordinates: [redZones] // Assuming zone.coordinates is an array of [lng, lat] and is closed
+            // const polygons = redZones.map(zone => {
+            //     return {
+            //         type: "Polygon",
+            //         // coordinates: [redZones] // Assuming zone.coordinates is an array of [lng, lat] and is closed
+            //         coordinates: [redZones.map(coord => [coord.lng, coord.lat])]
+            //     };
+            // });
+
+
+            const polygons = redZones.map(zone => {
+                const coords = createSquarePolygonWithRadius(zone.lat, zone.lng, 500);
+                return {
+                    type: "Polygon",
+                    coordinates: [coords]
+                };
+            });
+
+            requestBody.options = {
+                avoid_polygons: {
+                    type: "GeometryCollection",
+                    geometries: polygons
+                }
             };
-        });
 
-        requestBody.options = {
-            avoid_polygons: {
-                type: "GeometryCollection",
-                geometries: polygons
+            // const multiPolygonCoords = redZones.map(zone => {
+            //     const ring = createSquarePolygonWithRadius(zone.lat, zone.lng, 500); // radius = 500
+            //     return [ring]; // Each polygon is a list of rings; here we have one outer ring
+            // });
+
+            // requestBody.options = {
+            //     avoid_polygons: {
+            //         type: "MultiPolygon",
+            //         coordinates: multiPolygonCoords
+            //     }
+            // };
+
+            // Try to create a route with danger zones avoided
+            const avoidanceRoute = await tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode, requestBody);
+            if (avoidanceRoute && avoidanceRoute.success) {
+                routeData = avoidanceRoute.data;
+                avoidedDanger = true;
             }
-        };
-
-        // Try to create a route with danger zones avoided
-        const avoidanceRoute = await tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode, requestBody);
-        if (avoidanceRoute && avoidanceRoute.success) {
-            routeData = avoidanceRoute.data;
-            avoidedDanger = true;
-        }
-        }
-
-
-
     
+
+
+
+        }
         
         // If no danger zones or avoidance failed, get direct route
         if (!routeData) {
@@ -314,6 +328,32 @@ async function geocodeAndDrawRoute() {
     }
 }
 
+// Create a polygon around a redzone
+function createSquarePolygonWithRadius(lat, lon, radiusMeters) {
+    const latDegreesPerMeter = 1 / 111139; // approx. meters per degree latitude
+    const lonDegreesPerMeter = 1 / (111139 * Math.cos(lat * Math.PI / 180)); // meters per degree longitude at given latitude
+
+    const halfSideLat = radiusMeters * latDegreesPerMeter;
+    const halfSideLon = radiusMeters * lonDegreesPerMeter;
+
+    const southWest = [lon - halfSideLon, lat - halfSideLat];
+    const southEast = [lon + halfSideLon, lat - halfSideLat];
+    const northEast = [lon + halfSideLon, lat + halfSideLat];
+    const northWest = [lon - halfSideLon, lat + halfSideLat];
+
+    return {
+        type: "Polygon",
+        coordinates: [[
+            southWest,
+            southEast,
+            northEast,
+            northWest,
+            southWest // Close the ring
+        ]]
+    };
+}
+
+
 // Show route summary as a visible banner at the bottom center
 function showRouteBanner(distance, duration, travelMode, warning = '', route = null) {
     let banner = document.getElementById('route-banner');
@@ -336,6 +376,7 @@ function showRouteBanner(distance, duration, travelMode, warning = '', route = n
     document.getElementById('close-route-banner').onclick = hideRouteBanner;
     document.getElementById('show-directions-btn').onclick = () => showDirections(route);
 }
+
 function hideRouteBanner() {
     const banner = document.getElementById('route-banner');
     if (banner) banner.style.display = 'none';
