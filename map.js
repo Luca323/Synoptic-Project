@@ -71,73 +71,112 @@ function setupAutocomplete(inputId, suggestionsId) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Add styles for custom elements
-    const style = document.createElement('style');
-    style.textContent = `
-        .route-summary .leaflet-popup-content-wrapper {
-            background: rgba(255, 255, 255, 0.9);
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .route-summary .leaflet-popup-tip {
-            background: rgba(255, 255, 255, 0.9);
-        }
-        .custom-div-icon {
-            background: none;
-            border: none;
-            font-size: 24px;
-            text-align: center;
-            line-height: 24px;
-        }
-    `;
-    document.head.appendChild(style);
+// Only run browser code if in a browser environment
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    document.addEventListener('DOMContentLoaded', () => {
+        // Add styles for custom elements
+        const style = document.createElement('style');
+        style.textContent = `
+            .route-summary .leaflet-popup-content-wrapper {
+                background: rgba(255, 255, 255, 0.9);
+                border-radius: 8px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            }
+            .route-summary .leaflet-popup-tip {
+                background: rgba(255, 255, 255, 0.9);
+            }
+            .custom-div-icon {
+                background: none;
+                border: none;
+                font-size: 24px;
+                text-align: center;
+                line-height: 24px;
+            }
+        `;
+        document.head.appendChild(style);
 
-    // Map boundaries
-    const southWest = L.latLng(-26.33, 27.95);
-    const northEast = L.latLng(-26.05, 28.20);
-    const joburgBounds = L.latLngBounds(southWest, northEast);
+        // Map boundaries
+        const southWest = L.latLng(-26.33, 27.95);
+        const northEast = L.latLng(-26.05, 28.20);
+        const joburgBounds = L.latLngBounds(southWest, northEast);
 
-    // Initialize the map
-    map = L.map('map', {
-        center: [-26.2041, 28.0473], // Johannesburg coordinates
-        zoom: 13,
-        maxBounds: joburgBounds,
-        minZoom: 11,
-        maxZoom: 18
-    });
+        // Initialize the map
+        map = L.map('map', {
+            center: [-26.2041, 28.0473], // Johannesburg coordinates
+            zoom: 13,
+            maxBounds: joburgBounds,
+            minZoom: 11,
+            maxZoom: 18
+        });
 
-    // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-    }).addTo(map);    console.log('Map initialized:', map);
-    setupAutocomplete('start-address', 'start-suggestions');
-    setupAutocomplete('end-address', 'end-suggestions');
-    
-    // Add click event to fill manual address input
-    map.on('click', function(e) {
-        const lat = e.latlng.lat;
-        const lng = e.latlng.lng;
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);    console.log('Map initialized:', map);
+        setupAutocomplete('start-address', 'start-suggestions');
+        setupAutocomplete('end-address', 'end-suggestions');
         
-        // Reverse geocode to get address
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`)
-            .then(response => response.json())
-            .then(data => {
-                if (data && data.display_name) {
-                    const manualAddressInput = document.getElementById('manual-address');
-                    if (manualAddressInput) {
-                        manualAddressInput.value = data.display_name;
+        // Add click event to fill manual address input
+        map.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            // Reverse geocode to get address
+            fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        const manualAddressInput = document.getElementById('manual-address');
+                        if (manualAddressInput) {
+                            manualAddressInput.value = data.display_name;
+                        }
                     }
-                }
-            })
-            .catch(error => {
-                console.error('Error reverse geocoding:', error);
-            });
-    });
+                })
+                .catch(error => {
+                    console.error('Error reverse geocoding:', error);
+                });
+        });
 
-    // Initialize the reports table
-    updateReportsTable();
-});
+        // Initialize the reports table
+        updateReportsTable();
+    });
+    document.addEventListener('click', (event) => {
+        const navPanel = document.getElementById('nav-panel');
+        const navButton = document.getElementById('nav-button');
+        const startSuggestions = document.getElementById('start-suggestions');
+        const endSuggestions = document.getElementById('end-suggestions');
+        const feedbackPanel = document.getElementById('feedback-panel');
+        const reportBanner = document.getElementById('report-options-banner');
+        const startInput = document.getElementById('start-address');
+        const endInput = document.getElementById('end-address');
+
+        // Don't close anything if clicking on input fields
+        if (event.target === startInput || event.target === endInput) {
+            return;
+        }
+
+        // Handle nav panel closing
+        if (
+            !navPanel.contains(event.target) &&
+            !startSuggestions.contains(event.target) &&
+            !endSuggestions.contains(event.target) &&
+            event.target !== navButton
+        ) {
+            navPanel.classList.add('hidden');
+        }
+
+        // Handle report banner closing
+        if (!feedbackPanel.contains(event.target) && !reportBanner.contains(event.target)) {
+            reportBanner.classList.add('hidden');
+        }
+    });
+    document.getElementById('start-suggestions')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
+    document.getElementById('end-suggestions')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
+}
 
 // --- Improved Route Plotting ---
 async function geocodeAndDrawRoute() {
@@ -432,45 +471,48 @@ function toggleNavPanel() {
 }
 
 // Consolidated click handler for all panel management
-document.addEventListener('click', (event) => {
-    const navPanel = document.getElementById('nav-panel');
-    const navButton = document.getElementById('nav-button');
-    const startSuggestions = document.getElementById('start-suggestions');
-    const endSuggestions = document.getElementById('end-suggestions');
-    const feedbackPanel = document.getElementById('feedback-panel');
-    const reportBanner = document.getElementById('report-options-banner');
-    const startInput = document.getElementById('start-address');
-    const endInput = document.getElementById('end-address');
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    document.addEventListener('click', (event) => {
+        const navPanel = document.getElementById('nav-panel');
+        const navButton = document.getElementById('nav-button');
+        const startSuggestions = document.getElementById('start-suggestions');
+        const endSuggestions = document.getElementById('end-suggestions');
+        const feedbackPanel = document.getElementById('feedback-panel');
+        const reportBanner = document.getElementById('report-options-banner');
+        const startInput = document.getElementById('start-address');
+        const endInput = document.getElementById('end-address');
 
-    // Don't close anything if clicking on input fields
-    if (event.target === startInput || event.target === endInput) {
-        return;
-    }
+        // Don't close anything if clicking on input fields
+        if (event.target === startInput || event.target === endInput) {
+            return;
+        }
 
-    // Handle nav panel closing
-    if (
-        !navPanel.contains(event.target) &&
-        !startSuggestions.contains(event.target) &&
-        !endSuggestions.contains(event.target) &&
-        event.target !== navButton
-    ) {
-        navPanel.classList.add('hidden');
-    }
+        // Handle nav panel closing
+        if (
+            !navPanel.contains(event.target) &&
+            !startSuggestions.contains(event.target) &&
+            !endSuggestions.contains(event.target) &&
+            event.target !== navButton
+        ) {
+            navPanel.classList.add('hidden');
+        }
 
-    // Handle report banner closing
-    if (!feedbackPanel.contains(event.target) && !reportBanner.contains(event.target)) {
-        reportBanner.classList.add('hidden');
-    }
-});
+        // Handle report banner closing
+        if (!feedbackPanel.contains(event.target) && !reportBanner.contains(event.target)) {
+            reportBanner.classList.add('hidden');
+        }
+    });
+}
 
 // Ensure the nav panel does not close when clicking on suggestions
-document.getElementById('start-suggestions').addEventListener('click', (event) => {
-    event.stopPropagation();
-});
-
-document.getElementById('end-suggestions').addEventListener('click', (event) => {
-    event.stopPropagation();
-});
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+    document.getElementById('start-suggestions')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
+    document.getElementById('end-suggestions')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+    });
+}
 
 // Function to handle feedback submission
 function submitFeedback(type) {
@@ -995,7 +1037,9 @@ function triggerPanic() {
 }
 
 // Ensure panic function is globally accessible
-window.triggerPanic = triggerPanic;
+if (typeof window !== 'undefined') {
+  window.triggerPanic = triggerPanic;
+}
 
 // Function to print directions
 function printDirections() {
@@ -1166,10 +1210,16 @@ function downloadDirections() {
     alert('Directions downloaded successfully!');
 }
 
-if (typeof module !== 'undefined') {
+// Only export pure functions for testing in Node.js
+if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        submitFeedback,
-        toggleManualFeedback,
-        recentReports
+        calculateDistance,
+        calculateBearing,
+        calculateDestinationPoint,
+        calculateMidpoint,
+        getReportEmoji,
+        getInitialZoneStatus,
+        createCircleCoordinates,
+        calculateAvoidanceWaypoints
     };
 }
