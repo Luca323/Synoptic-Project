@@ -1163,5 +1163,13 @@ function downloadDirections() {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
     
-    alert('✅ Directions downloaded successfully!');
+    alert('Directions downloaded successfully!');
+}
+
+if (typeof module !== 'undefined') {
+    module.exports = {
+        submitFeedback,
+        toggleManualFeedback,
+        recentReports
+    };
 }
