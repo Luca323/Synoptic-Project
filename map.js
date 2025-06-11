@@ -1,15 +1,14 @@
-// Global variables and constants
 let map;
 let startMarker, endMarker;
 let routePolylines = [];
 let currentRouteSummary = null;
-const ORS_API_KEY = "5b3ce3597851110001cf6248837f3145429a4ad1aabe11c432e8d7ae";
+const ORS_API_KEY = "5b3ce3597851110001cf6248837f3145429a4ad1aabe11c432e8d7ae"; //API Key
 
-// Array to store reports
+//Array to store reports
 let recentReports = [];
-let dangerZones = []; // Array to store danger zones
+let dangerZones = []; //Array to store danger zones
 
-// Geocoding function
+//Geocoding function
 async function geocodeAddress(address) {
     const url = `https://api.openrouteservice.org/geocode/search?api_key=${ORS_API_KEY}&text=${encodeURIComponent(address)}&boundary.country=ZA&size=1`;
     const response = await fetch(url);
@@ -22,7 +21,7 @@ async function geocodeAddress(address) {
     throw new Error(`No results found for: ${address}`);
 }
 
-// --- Address Autocomplete for Start/End Inputs ---
+//Autofill for address fields
 function setupAutocomplete(inputId, suggestionsId) {
     const input = document.getElementById(inputId);
     const suggestions = document.getElementById(suggestionsId);
@@ -38,7 +37,7 @@ function setupAutocomplete(inputId, suggestionsId) {
         suggestions.innerHTML = '<div class="suggestion">Loading...</div>';
         const fetchId = ++currentFetchId;
         fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&addressdetails=1&limit=5&countrycodes=za&viewbox=27.95,-26.05,28.20,-26.33&bounded=1`)
-            .then(res => res.json())
+            .then(res => res.json()) //API call
             .then(data => {
                 if (fetchId !== currentFetchId) return;
                 suggestions.innerHTML = '';
@@ -54,11 +53,10 @@ function setupAutocomplete(inputId, suggestionsId) {
                         input.value = place.display_name;
                         input.selectedPlace = place;
                         suggestions.innerHTML = '';
-                        // Do NOT close the nav panel here!
                     };
                     suggestions.appendChild(div);
                 });
-        }, 300); // 300ms debounce
+        }, 300); //300ms debounce
     });
 
     if (!input.hasClickListener) {
@@ -71,10 +69,10 @@ function setupAutocomplete(inputId, suggestionsId) {
     }
 }
 
-// Only run browser code if in a browser environment
+//Only run browser code if in a browser environment
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     document.addEventListener('DOMContentLoaded', () => {
-        // Add styles for custom elements
+        //Add styles for custom elements
         const style = document.createElement('style');
         style.textContent = `
             .route-summary .leaflet-popup-content-wrapper {
@@ -95,33 +93,33 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         `;
         document.head.appendChild(style);
 
-        // Map boundaries
+        //Map boundaries, contains it to Johannesburg
         const southWest = L.latLng(-26.33, 27.95);
         const northEast = L.latLng(-26.05, 28.20);
         const joburgBounds = L.latLngBounds(southWest, northEast);
 
-        // Initialize the map
+        //Initialize the map
         map = L.map('map', {
-            center: [-26.2041, 28.0473], // Johannesburg coordinates
+            center: [-26.2041, 28.0473], //Johannesburg coordinates
             zoom: 13,
             maxBounds: joburgBounds,
             minZoom: 11,
             maxZoom: 18
         });
 
-        // Add OpenStreetMap tiles
+        //Add OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);    console.log('Map initialized:', map);
         setupAutocomplete('start-address', 'start-suggestions');
         setupAutocomplete('end-address', 'end-suggestions');
         
-        // Add click event to fill manual address input
+        //Add click event to fill manual address input
         map.on('click', function(e) {
             const lat = e.latlng.lat;
             const lng = e.latlng.lng;
             
-            // Reverse geocode to get address
+            //Reverse geocode to get address
             fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`)
                 .then(response => response.json())
                 .then(data => {
@@ -137,7 +135,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
                 });
         });
 
-        // Initialize the reports table
+        //Initialize the reports table
         updateReportsTable();
     });
     document.addEventListener('click', (event) => {
@@ -150,12 +148,12 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         const startInput = document.getElementById('start-address');
         const endInput = document.getElementById('end-address');
 
-        // Don't close anything if clicking on input fields
+        //Don't close anything if clicking on input fields
         if (event.target === startInput || event.target === endInput) {
             return;
         }
 
-        // Handle nav panel closing
+        //Handle nav panel closing
         if (
             !navPanel.contains(event.target) &&
             !startSuggestions.contains(event.target) &&
@@ -165,7 +163,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
             navPanel.classList.add('hidden');
         }
 
-        // Handle report banner closing
+        //Handle report banner closing
         if (!feedbackPanel.contains(event.target) && !reportBanner.contains(event.target)) {
             reportBanner.classList.add('hidden');
         }
@@ -178,7 +176,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     });
 }
 
-// --- Improved Route Plotting ---
+//Route Plotting
 async function geocodeAndDrawRoute() {
     const startInput = document.getElementById('start-address');
     const endInput = document.getElementById('end-address');
@@ -206,14 +204,14 @@ async function geocodeAndDrawRoute() {
             getCoords(endInput)
         ]);
 
-        // Clear old route & markers
+        //Clear old route & markers
         routePolylines.forEach(line => line.remove());
         routePolylines = [];
         if (startMarker) startMarker.remove();
         if (endMarker) endMarker.remove();
         if (currentRouteSummary) currentRouteSummary.remove();
 
-        // Add start/end markers
+        //Add start/end markers
         startMarker = L.marker(startCoords, {
             icon: L.divIcon({ className: 'custom-div-icon', html: '🟢', iconSize: [30, 30], iconAnchor: [15, 15] })
         }).addTo(map);
@@ -222,7 +220,7 @@ async function geocodeAndDrawRoute() {
             icon: L.divIcon({ className: 'custom-div-icon', html: '📍', iconSize: [30, 30], iconAnchor: [15, 30] })
         }).addTo(map);
 
-        // Prepare ORS API call
+        //Prepare ORS API call
         const url = `https://api.openrouteservice.org/v2/directions/${travelMode}/geojson`;
 
         const requestBody = {
@@ -237,7 +235,7 @@ async function geocodeAndDrawRoute() {
             maneuvers: true
         };
 
-        // Add avoid_polygons for red zones
+        //Add avoid_polygons for red zones
         const redZones = dangerZones.filter(zone => zone.status === 'red');
 
         if (redZones.length > 0) {
@@ -247,7 +245,7 @@ async function geocodeAndDrawRoute() {
             }));
 
             const multiPolygonCoords = redZones.map(zone =>
-            [createCircleCoordinates(zone.lat, zone.lon, 400)] // array of 1 polygon = [[...]]
+            [createCircleCoordinates(zone.lat, zone.lon, 400)] //array of 1 polygon 
             );
 
             requestBody.options = {
@@ -257,7 +255,7 @@ async function geocodeAndDrawRoute() {
             }
             };
         }
-        // Fetch route
+        //Fetch route
         const response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -282,9 +280,9 @@ async function geocodeAndDrawRoute() {
         }
 
         const route = data.features[0];
-        const coords = route.geometry.coordinates.map(coord => [coord[1], coord[0]]); // [lat, lng]
+        const coords = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
 
-        // Determine if the route is still near red zones
+        //Determine if the route is still near red zones
         const stillDangerous = coords.some(coord =>
             redZones.some(zone =>
                 calculateDistance(coord[0], coord[1], zone.lat, zone.lon) <= 250
@@ -302,7 +300,7 @@ async function geocodeAndDrawRoute() {
             opacity: 0.8
         }).addTo(map);
 
-        routePolylines.push(routeLine);
+        routePolylines.push(routeLine); //Plot new route line
         map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
         document.getElementById('nav-panel').classList.add('hidden');
 
@@ -319,7 +317,7 @@ async function geocodeAndDrawRoute() {
 }
 
 
-// Show route summary as a visible banner at the bottom center
+//Show route summary as a visible banner at the bottom center
 function showRouteBanner(distance, duration, travelMode, warning = '', route = null) {
     let banner = document.getElementById('route-banner');
     if (!banner) {
@@ -328,7 +326,7 @@ function showRouteBanner(distance, duration, travelMode, warning = '', route = n
         document.body.appendChild(banner);
     }
     
-    // Store route data for directions
+    //Store route data for directions
     banner.routeData = route;
     
     banner.innerHTML = `
@@ -346,7 +344,7 @@ function hideRouteBanner() {
     if (banner) banner.style.display = 'none';
 }
 
-// Function to show turn-by-turn directions
+//Function to show turn-by-turn directions
 function showDirections(route) {
     if (!route || !route.properties.segments[0].steps) {
         alert('No detailed directions available for this route.');
@@ -362,7 +360,7 @@ function showDirections(route) {
         document.body.appendChild(directionsPanel);
     }
     
-    // Create directions content
+    //Create directions content
     let directionsHTML = `
         <div class="directions-header">
             <h3>🧭 Turn-by-Turn Directions</h3>
@@ -380,22 +378,22 @@ function showDirections(route) {
             ? `${(step.distance / 1000).toFixed(1)} km` 
             : `${Math.round(step.distance)} m`;
         
-        // Enhanced instruction with street name extraction
+        //Enhanced instruction with street name extraction
         let instruction = step.instruction || 'Continue straight';
         let streetName = '';
         
-        // Try to extract street name from instruction
+        //Try to extract street name from instruction
         if (step.name && step.name !== '-') {
             streetName = step.name;
         }
         
-        // Enhance instruction with street name if available
+        //Enhance instruction with street nam if available
         if (streetName) {
             instruction = instruction.replace(/Continue/gi, `Continue on ${streetName}`);
             instruction = instruction.replace(/Turn/gi, `Turn onto ${streetName}`);
             instruction = instruction.replace(/Head/gi, `Head on ${streetName}`);
             
-            // If no replacement was made, append street name
+            //if no replacement was made, append street name
             if (!instruction.includes(streetName)) {
                 instruction += ` on ${streetName}`;
             }
@@ -426,11 +424,11 @@ function showDirections(route) {
     directionsPanel.innerHTML = directionsHTML;
     directionsPanel.classList.remove('hidden');
     
-    // Store route data globally for print/download functions
+    //Store route data globally for direction download functions
     window.currentRouteData = route;
 }
 
-// Function to hide directions panel
+//Function to hide directions panel
 function hideDirections() {
     const directionsPanel = document.getElementById('directions-panel');
     if (directionsPanel) {
@@ -438,39 +436,39 @@ function hideDirections() {
     }
 }
 
-// Function to get appropriate icon for direction type
+//Function to get appropriate icon for direction type
 function getDirectionIcon(stepType) {
     switch(stepType) {
-        case 0: return '🚀'; // Start
-        case 1: return '↗️'; // Turn right
-        case 2: return '↖️'; // Turn left  
-        case 3: return '⬆️'; // Continue straight
-        case 4: return '↩️'; // U-turn
-        case 5: return '🏁'; // Arrive at destination
-        case 6: return '↗️'; // Slight right
-        case 7: return '↖️'; // Slight left
-        case 8: return '➡️'; // Sharp right
-        case 9: return '⬅️'; // Sharp left
-        case 10: return '🔄'; // Roundabout
-        case 11: return '🛣️'; // Enter highway
-        case 12: return '🛤️'; // Exit highway
-        default: return '⬆️'; // Default straight
+        case 0: return '🚀'; //Start
+        case 1: return '↗️'; //Turn right
+        case 2: return '↖️'; //Turn left  
+        case 3: return '⬆️'; //Continue straight
+        case 4: return '↩️'; //U-turn
+        case 5: return '🏁'; //Arrive at destination
+        case 6: return '↗️'; //Slight right
+        case 7: return '↖️'; //Slight left
+        case 8: return '➡️'; //Sharp right
+        case 9: return '⬅️'; //Sharp left
+        case 10: return '🔄'; //Roundabout
+        case 11: return '🛣️'; //Enter highway
+        case 12: return '🛤️'; //Exit highway
+        default: return '⬆️'; //Default straight
     }
 }
 
-// Function to toggle report options
+//Function to toggle report options
 function toggleReportOptions() {
     const banner = document.getElementById('report-options-banner');
     banner.classList.toggle('hidden');
 }
 
-// Function to toggle navigation panel
+//Function to toggle navigation panel
 function toggleNavPanel() {
     const navPanel = document.getElementById('nav-panel');
     navPanel.classList.toggle('hidden');
 }
 
-// Consolidated click handler for all panel management
+//Consolidated click handler for all panel management
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     document.addEventListener('click', (event) => {
         const navPanel = document.getElementById('nav-panel');
@@ -482,12 +480,12 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
         const startInput = document.getElementById('start-address');
         const endInput = document.getElementById('end-address');
 
-        // Don't close anything if clicking on input fields
+        //Don't close anything if clicking on input fields
         if (event.target === startInput || event.target === endInput) {
             return;
         }
 
-        // Handle nav panel closing
+        //Handle nav panel closing
         if (
             !navPanel.contains(event.target) &&
             !startSuggestions.contains(event.target) &&
@@ -497,14 +495,14 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
             navPanel.classList.add('hidden');
         }
 
-        // Handle report banner closing
+        //Handle report banner closing
         if (!feedbackPanel.contains(event.target) && !reportBanner.contains(event.target)) {
             reportBanner.classList.add('hidden');
         }
     });
 }
 
-// Ensure the nav panel does not close when clicking on suggestions
+//Ensure the nav panel does not close when clicking on suggestions
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     document.getElementById('start-suggestions')?.addEventListener('click', (event) => {
         event.stopPropagation();
@@ -514,7 +512,7 @@ if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     });
 }
 
-// Function to handle feedback submission
+//Function to handle feedback submission
 function submitFeedback(type) {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition((position) => {
@@ -522,13 +520,13 @@ function submitFeedback(type) {
             const location = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
             const time = new Date().toLocaleString();
             
-            // Add to recent reports
+            //Add to recent reports
             recentReports.unshift({ type, location, time });
-            if (recentReports.length > 10) recentReports.pop(); // Keep only last 10 reports
-              // Create or update danger zones
+            if (recentReports.length > 10) recentReports.pop(); //Keep only last 10 reports
+              //Create or update danger zones
             createOrUpdateDangerZone(latitude, longitude, type, location);
             
-            // Update the reports table
+            //Update the reports table
             updateReportsTable();
             
             alert(`Feedback submitted: ${type} at location: ${location}.`);
@@ -540,18 +538,18 @@ function submitFeedback(type) {
     }
 }
 
-// Function to toggle manual feedback banner
+//Function to toggle manual feedback banner
 function toggleManualFeedback() {
     const banner = document.getElementById('manual-feedback-banner');
     if (banner.classList.contains('hidden')) {
         banner.classList.remove('hidden');
-        updateReportsTable(); // Update table when opening
+        updateReportsTable(); //Update table when opening
     } else {
         banner.classList.add('hidden');
     }
 }
 
-// Function to handle manual feedback submission
+//Function to handle manual feedback submission
 async function submitManualFeedback(type) {
     const address = document.getElementById('manual-address').value.trim();
     if (!address) {
@@ -559,20 +557,20 @@ async function submitManualFeedback(type) {
         return;
     }
       try {
-        // Geocode the address to get coordinates - try multiple sources
+        //Geocode the address to get coordinates - try multiple sources
         let response, data;
         
-        // First try with Johannesburg, South Africa context
+        //First try with Johannesburg, South Africa context
         response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Johannesburg, South Africa')}&addressdetails=1&limit=1`);
         data = await response.json();
         
-        // If no results, try without country restriction
+        //If no results, try without country restriction
         if (!data || data.length === 0) {
             response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address + ', Johannesburg')}&addressdetails=1&limit=1`);
             data = await response.json();
         }
         
-        // If still no results, try just the address
+        //If still no results, try just the address
         if (!data || data.length === 0) {
             response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&addressdetails=1&limit=1`);
             data = await response.json();
@@ -583,7 +581,7 @@ async function submitManualFeedback(type) {
             const lat = parseFloat(data[0].lat);
             const lon = parseFloat(data[0].lon);
             
-            // Create a red marker for the report
+            //Create a red marker for the report
             const reportIcon = L.divIcon({
                 className: 'report-marker',
                 html: `<div class="report-marker-content ${type}">${getReportEmoji(type)}</div>`,
@@ -593,26 +591,26 @@ async function submitManualFeedback(type) {
             
             const reportMarker = L.marker([lat, lon], { icon: reportIcon }).addTo(map);
             
-            // Add popup with report details
+            //Add popup with report details
             reportMarker.bindPopup(`
                 <strong>${type.charAt(0).toUpperCase() + type.slice(1)} Report</strong><br>
                 <em>${address}</em><br>
                 <small>${new Date().toLocaleString()}</small>
             `);
-              // Pan map to show the marker
+              //Pan map to show the marker
             map.setView([lat, lon], Math.max(map.getZoom(), 15));
             
             const time = new Date().toLocaleString();
             
-            // Add to recent reports
+            //Add to recent reports
             recentReports.unshift({ type, location: address, time });
-            if (recentReports.length > 10) recentReports.pop(); // Keep only last 10 reports
-              // Create or update danger zones
+            if (recentReports.length > 10) recentReports.pop(); //Keep only last 10 reports
+              //Create or update danger zones
             createOrUpdateDangerZone(lat, lon, type, address);
             
             alert(`Manual feedback submitted: ${type} at address: ${address}.`);
-            document.getElementById('manual-address').value = ''; // Clear input
-            updateReportsTable(); // Update the table
+            document.getElementById('manual-address').value = ''; //Clear input
+            updateReportsTable(); //Update the table
             
         } else {
             alert('Unable to find the specified address. Please try a more specific address (e.g., "123 Main Street, Johannesburg").');
@@ -624,7 +622,7 @@ async function submitManualFeedback(type) {
     }
 }
 
-// Helper function to get emoji for report type
+//Helper function to get emoji for report type
 function getReportEmoji(type) {
     switch(type) {
         case 'crime': return '⚠️';
@@ -636,22 +634,22 @@ function getReportEmoji(type) {
     }
 }
 
-// Function to create or update danger zones
+//Function to create or update danger zones
 function createOrUpdateDangerZone(lat, lon, reportType, address) {
-    const ZONE_RADIUS = 500; // Increased to 500 meters radius for better grouping
+    const ZONE_RADIUS = 500; //500m buffer zone
     
-    // Check if there's an existing zone nearby
+    //Check if there's an existing zone nearby
     const existingZone = dangerZones.find(zone => {
         const distance = calculateDistance(lat, lon, zone.lat, zone.lon);
         return distance <= ZONE_RADIUS;
     });
     
     if (existingZone) {
-        // Add report to existing zone
+        //Add report to existing zone
         existingZone.reports.push({ type: reportType, address, timestamp: new Date() });
         updateZoneStatus(existingZone);
     } else {
-        // Create new zone
+        //Create new zone
         const newZone = {
             id: Date.now(),
             lat: lat,
@@ -665,26 +663,26 @@ function createOrUpdateDangerZone(lat, lon, reportType, address) {
     }
 }
 
-// Function to get initial zone status based on report type
+//Function to get initial zone status based on report type
 function getInitialZoneStatus(reportType) {
     if (reportType === 'crime') {
-        return 'red'; // Crime is instant red zone
+        return 'red'; //Crime is instant red zone
     } else if (reportType === 'lighting' || reportType === 'pothole') {
-        return 'orange'; // Poor lighting and potholes start as orange
+        return 'orange'; //Poor lighting and potholes start as orange
     } else {
-        return 'safe'; // Safe areas don't create danger zones
+        return 'safe'; //Safe areas don't create danger zones
     }
 }
 
-// Function to update zone status and visual representation
+//Function to update zone status and visual representation
 function updateZoneStatus(zone) {
-    // Count different types of reports
+    //Count different types of reports
     const crimeReports = zone.reports.filter(r => r.type === 'crime').length;
     const lightingReports = zone.reports.filter(r => r.type === 'lighting').length;
     const potholeReports = zone.reports.filter(r => r.type === 'pothole').length;
     const safeReports = zone.reports.filter(r => r.type === 'safe').length;
     
-    // Determine zone status
+    //Determine zone status
     let newStatus = 'safe';
     if (crimeReports > 0 || (lightingReports + potholeReports) >= 3) {
         newStatus = 'red';
@@ -692,39 +690,39 @@ function updateZoneStatus(zone) {
         newStatus = 'orange';
     }
     
-    // Safe reports can neutralize some danger
+    //Safe reports can neutralize some danger
     if (safeReports > (crimeReports + lightingReports + potholeReports)) {
         newStatus = 'safe';
     }
     
     zone.status = newStatus;
     
-    // Remove old marker if exists
+    //Remove old marker if exists
     if (zone.marker) {
         zone.marker.remove();
     }
       
-    // Create new zone marker if it's a danger zone
+    //Create new zone marker if it's a danger zone
     if (newStatus !== 'safe') {
         createZoneMarker(zone);
     }
 }
 
-// Function to create visual zone marker
+//Function to create visual zone marker
 function createZoneMarker(zone) {
     const color = zone.status === 'red' ? '#ff4444' : '#ff8800';
     const opacity = zone.status === 'red' ? 0.4 : 0.3;
     
-    // Create circle marker for the danger zone
+    //Create circle marker for the danger zone
     zone.marker = L.circle([zone.lat, zone.lon], {
         color: color,
         fillColor: color,
         fillOpacity: opacity,
-        radius: 500, // Updated to match the 500 meter zone radius
+        radius: 500, //Updated to match the 500 meter zone radius
         weight: 2
     }).addTo(map);
     
-    // Create popup with zone information
+    //Create popup with zone information
     const reportSummary = zone.reports.reduce((acc, report) => {
         acc[report.type] = (acc[report.type] || 0) + 1;
         return acc;
@@ -744,9 +742,9 @@ function createZoneMarker(zone) {
     zone.marker.bindPopup(popupContent);
 }
 
-// Function to calculate distance between two points (in meters)
+//Function to calculate distance between two points (in meters)
 function calculateDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371000; // Earth's radius in meters
+    const R = 6371000; //Earth's radius in meters
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -756,38 +754,38 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
-// Function to create circle coordinates for polygon avoidance
+//Function to create circle coordinates for polygon avoidance
 function createCircleCoordinates(centerLat, centerLon, radiusMeters) {
     const points = [];
-    const numPoints = 72; // Number of points to create circle
+    const numPoints = 72; //Number of points to create circle
     
     for (let i = 0; i < numPoints; i++) {
         const angle = (i * 360 / numPoints) * Math.PI / 180;
         const lat = centerLat + (radiusMeters / 111000) * Math.cos(angle);
         const lon = centerLon + (radiusMeters / (111000 * Math.cos(centerLat * Math.PI / 180))) * Math.sin(angle);
-        points.push([lon, lat]); // Note: longitude first for GeoJSON
+        points.push([lon, lat]); //Note: longitude first for GeoJSON
     }
     
-    // Close the circle by adding the first point at the end
+    //Close the circle by adding the first point at the end
     points.push(points[0]);
     return points;
 }
 
-// Function to try avoiding danger zones by creating strategic waypoints
+//Function to try avoiding danger zones by creating strategic waypoints
 async function tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode) {
     try {
-        // Calculate waypoints that go around danger zones
+        //Calculate waypoints that go around danger zones
         const waypoints = calculateAvoidanceWaypoints(startCoords, endCoords, redZones);
         
         if (waypoints.length === 0) {
             return { success: false };
         }
         
-        // Create coordinates array with waypoints
+        //Create coordinates array with waypoints
         const coordinates = [
             [startCoords[1], startCoords[0]], // Start
-            ...waypoints.map(wp => [wp[1], wp[0]]), // Waypoints (lon, lat)
-            [endCoords[1], endCoords[0]] // End
+            ...waypoints.map(wp => [wp[1], wp[0]]), //Waypoints (lon, lat)
+            [endCoords[1], endCoords[0]]
         ];        const requestBody = {
             coordinates: coordinates,
             instructions: true,
@@ -799,7 +797,7 @@ async function tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode)
         
         const url = `https://api.openrouteservice.org/v2/directions/${travelMode}/geojson`;
         
-        const response = await fetch(url, {
+        const response = await fetch(url, { //API call
             method: 'POST',
             headers: {
                 'Authorization': ORS_API_KEY,
@@ -814,7 +812,7 @@ async function tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode)
         const data = await response.json();
         
         if (data.features && data.features.length > 0) {
-            // Verify the route actually avoids danger zones
+            //Verify the route actually avoids danger zones
             const route = data.features[0];
             const coords = route.geometry.coordinates.map(coord => [coord[1], coord[0]]);
             
@@ -839,32 +837,32 @@ async function tryAvoidDangerZones(startCoords, endCoords, redZones, travelMode)
     }
 }
 
-// Function to calculate waypoints that avoid danger zones
+//Function to calculate waypoints that avoid danger zones
 function calculateAvoidanceWaypoints(startCoords, endCoords, redZones) {
     const waypoints = [];
     
-    // Calculate the direct path
+    //Calculate the direct path
     const directBearing = calculateBearing(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
     const directDistance = calculateDistance(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
     
-    // Check each danger zone to see if it's in the path
+    //Check each danger zone to see if it's in the path
     redZones.forEach(zone => {
         const distanceToZone = calculateDistance(startCoords[0], startCoords[1], zone.lat, zone.lon);
         const zoneDistanceFromEnd = calculateDistance(zone.lat, zone.lon, endCoords[0], endCoords[1]);
         
-        // Only create waypoints for zones that are roughly between start and end
+        //Only create waypoints for zones that are roughly between start and end
         if (distanceToZone < directDistance && zoneDistanceFromEnd < directDistance) {
-            // Calculate perpendicular waypoints around the danger zone
-            const avoidanceDistance = 500; // 500m detour distance
+            //Calculate perpendicular waypoints around the danger zone
+            const avoidanceDistance = 500; //500m buffer
             
-            // Calculate two potential waypoints on either side of the danger zone
+            //Calculate two potential waypoints on either side of the danger zone
             const perpBearing1 = (directBearing + 90) % 360;
             const perpBearing2 = (directBearing - 90 + 360) % 360;
             
             const waypoint1 = calculateDestinationPoint(zone.lat, zone.lon, avoidanceDistance, perpBearing1);
             const waypoint2 = calculateDestinationPoint(zone.lat, zone.lon, avoidanceDistance, perpBearing2);
             
-            // Choose the waypoint that's closer to the direct path
+            //Choose the waypoint that's closer to the direct path
             const midpoint = calculateMidpoint(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
             const dist1 = calculateDistance(waypoint1.lat, waypoint1.lon, midpoint.lat, midpoint.lon);
             const dist2 = calculateDistance(waypoint2.lat, waypoint2.lon, midpoint.lat, midpoint.lon);
@@ -877,31 +875,31 @@ function calculateAvoidanceWaypoints(startCoords, endCoords, redZones) {
     return waypoints;
 }
 
-// Helper function to calculate bearing between two points
+//Helper function to calculate bearing between two points
 function calculateBearing(lat1, lon1, lat2, lon2) {
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const lat1Rad = lat1 * Math.PI / 180;
     const lat2Rad = lat2 * Math.PI / 180;
     
     const y = Math.sin(dLon) * Math.cos(lat2Rad);
-    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon); //Trigonimetry stuff
     
     const bearing = Math.atan2(y, x) * 180 / Math.PI;
     return (bearing + 360) % 360;
 }
 
-// Helper function to calculate destination point given distance and bearing
+//Helper function to calculate destination point given distance and bearing
 function calculateDestinationPoint(lat, lon, distance, bearing) {
-    const R = 6371000; // Earth's radius in meters
+    const R = 6371000; //Earth's radius in meters
     const bearingRad = bearing * Math.PI / 180;
     const latRad = lat * Math.PI / 180;
     const lonRad = lon * Math.PI / 180;
     
     const newLatRad = Math.asin(Math.sin(latRad) * Math.cos(distance / R) + 
-                               Math.cos(latRad) * Math.sin(distance / R) * Math.cos(bearingRad));
+                               Math.cos(latRad) * Math.sin(distance / R) * Math.cos(bearingRad)); //More trigonometry stuff
     
     const newLonRad = lonRad + Math.atan2(Math.sin(bearingRad) * Math.sin(distance / R) * Math.cos(latRad),
-                                         Math.cos(distance / R) - Math.sin(latRad) * Math.sin(newLatRad));
+                                         Math.cos(distance / R) - Math.sin(latRad) * Math.sin(newLatRad)); //Even more trig
     
     return {
         lat: newLatRad * 180 / Math.PI,
@@ -909,7 +907,7 @@ function calculateDestinationPoint(lat, lon, distance, bearing) {
     };
 }
 
-// Helper function to calculate midpoint between two coordinates
+//Helper function to calculate midpoint between two coordinates
 function calculateMidpoint(lat1, lon1, lat2, lon2) {
     return {
         lat: (lat1 + lat2) / 2,
@@ -917,17 +915,17 @@ function calculateMidpoint(lat1, lon1, lat2, lon2) {
     };
 }
 
-// Function to update the reports table display
+//Function to update the reports table display
 function updateReportsTable() {
     const tbody = document.getElementById('reports-tbody');
     if (!tbody) {
         return;
     }
     
-    // Clear existing rows
+    //Clear existing rows
     tbody.innerHTML = '';
     
-    // Add recent reports to table
+    //Add recent reports to table
     recentReports.forEach(report => {
         const row = document.createElement('tr');
         row.innerHTML = `
@@ -938,7 +936,7 @@ function updateReportsTable() {
         tbody.appendChild(row);
     });
     
-    // If no reports, show a message
+    //If no reports, show a message
     if (recentReports.length === 0) {
         const row = document.createElement('tr');
         row.innerHTML = '<td colspan="3" style="text-align: center; font-style: italic;">No reports yet</td>';
@@ -946,28 +944,28 @@ function updateReportsTable() {
     }
 }
 
-// Function to handle panic button
-function triggerPanic() {
+//Function to handle panic button
+function triggerPanic() { //Simulation of what panic may look like
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition((position) => {
             const { latitude, longitude } = position.coords;
             const location = `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
             const time = new Date().toLocaleString();
             
-            // Add panic report to recent reports
+            //Add panic report to recent reports
             recentReports.unshift({ 
                 type: 'panic', 
                 location: location, 
                 time: time 
             });
             if (recentReports.length > 10) recentReports.pop();
-              // Create an urgent danger zone for panic reports
+              //Create an urgent danger zone for panic reports
             createOrUpdateDangerZone(latitude, longitude, 'crime', location);
             
-            // Update the reports table
+            //Update the reports table
             updateReportsTable();
             
-            // Automatically alert authorities and log incident
+            //Automatically alert authorities and log incident
             alert(
                 `🚨 EMERGENCY ALERT SENT! 🚨\n\n` +
                 `Your location has been automatically reported to authorities:\n` +
@@ -979,7 +977,7 @@ function triggerPanic() {
                 `Stay safe! Help is being notified of your location.`
             );
             
-            // Flash the panic button to show it was activated
+            //Flash the panic button to show it was activated
             const panicButton = document.getElementById('panic-button');
             if (panicButton) {
                 panicButton.style.animation = 'flash 1s ease-in-out 3';
@@ -989,7 +987,7 @@ function triggerPanic() {
             }
             
         }, (error) => {
-            // If location access fails, still allow panic report
+            //If location access fails, still allow panic report
             const time = new Date().toLocaleString();
             
             recentReports.unshift({ 
@@ -1000,7 +998,7 @@ function triggerPanic() {
             if (recentReports.length > 10) recentReports.pop();
               updateReportsTable();
             
-            // Automatically alert authorities
+            //Automatically alert authorities
             alert(
                 `🚨 EMERGENCY ALERT SENT! 🚨\n\n` +
                 `Your location has been automatically reported to authorities.\n` +
@@ -1012,7 +1010,7 @@ function triggerPanic() {
             );
         });
     } else {
-        // Geolocation not supported
+        //Geolocation not supported
         const time = new Date().toLocaleString();
           recentReports.unshift({ 
             type: 'panic', 
@@ -1023,7 +1021,7 @@ function triggerPanic() {
         
         updateReportsTable();
         
-        // Automatically alert authorities
+        //Automatically alert authorities
         alert(
             `🚨 EMERGENCY ALERT SENT! 🚨\n\n` +
             `Authorities have been automatically notified.\n`+
@@ -1036,12 +1034,12 @@ function triggerPanic() {
     }
 }
 
-// Ensure panic function is globally accessible
+//Ensure panic function is globally accessible
 if (typeof window !== 'undefined') {
   window.triggerPanic = triggerPanic;
 }
 
-// Function to print directions
+//Function to print directions
 function printDirections() {
     if (!window.currentRouteData) {
         alert('No route data available for printing.');
@@ -1053,7 +1051,7 @@ function printDirections() {
     const totalDistance = (route.properties.segments[0].distance / 1000).toFixed(2);
     const totalTime = Math.round(route.properties.segments[0].duration / 60);
     
-    // Create printable HTML
+    //Create printable and dowloadable HTML document
     let printHTML = `
         <!DOCTYPE html>
         <html>
@@ -1132,14 +1130,14 @@ function printDirections() {
         </html>
     `;
     
-    // Open print window
+    //Open print window
     const printWindow = window.open('', '_blank');
     printWindow.document.write(printHTML);
     printWindow.document.close();
     printWindow.print();
 }
 
-// Function to download directions as PDF/HTML
+//Function to download directions as PDF/HTML
 function downloadDirections() {
     if (!window.currentRouteData) {
         alert('No route data available for download.');
@@ -1151,7 +1149,7 @@ function downloadDirections() {
     const totalDistance = (route.properties.segments[0].distance / 1000).toFixed(2);
     const totalTime = Math.round(route.properties.segments[0].duration / 60);
     
-    // Create downloadable content
+    //Create downloadable content
     let content = `SafeRoute Navigation - Turn-by-Turn Directions\n`;
     content += `==============================================\n\n`;
     content += `Route Summary:\n`;
@@ -1196,7 +1194,7 @@ function downloadDirections() {
     content += `   Medical: 10177\n`;
     content += `   Fire: 10111\n`;
     
-    // Create and download file
+    //Create and download file
     const blob = new Blob([content], { type: 'text/plain' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1210,7 +1208,7 @@ function downloadDirections() {
     alert('Directions downloaded successfully!');
 }
 
-// Only export pure functions for testing in Node.js
+//Only export pure functions for testing in Node.js
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         calculateDistance,
