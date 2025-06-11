@@ -636,7 +636,8 @@ function getReportEmoji(type) {
 
 //Function to create or update danger zones
 function createOrUpdateDangerZone(lat, lon, reportType, address) {
-    const ZONE_RADIUS = 500; //500m buffer zone
+    const ZONE_RADIUS = reportType === 'crime' ? 500 : 100;
+ //500m buffer zone
     
     //Check if there's an existing zone nearby
     const existingZone = dangerZones.find(zone => {
@@ -712,22 +713,23 @@ function updateZoneStatus(zone) {
 function createZoneMarker(zone) {
     const color = zone.status === 'red' ? '#ff4444' : '#ff8800';
     const opacity = zone.status === 'red' ? 0.4 : 0.3;
-    
-    //Create circle marker for the danger zone
+    const radius = zone.status === 'red' ? 500 : 200; //Smaller area for orange zones
+
+    //Create circle marker
     zone.marker = L.circle([zone.lat, zone.lon], {
         color: color,
         fillColor: color,
         fillOpacity: opacity,
-        radius: 500, //Updated to match the 500 meter zone radius
+        radius: radius,
         weight: 2
     }).addTo(map);
-    
-    //Create popup with zone information
+
+    //Report summary
     const reportSummary = zone.reports.reduce((acc, report) => {
         acc[report.type] = (acc[report.type] || 0) + 1;
         return acc;
     }, {});
-    
+
     const popupContent = `
         <div class="zone-popup">
             <h4>${zone.status === 'red' ? '🔴 High Danger Zone' : '🟠 Caution Zone'}</h4>
@@ -735,10 +737,10 @@ function createZoneMarker(zone) {
             ${Object.entries(reportSummary).map(([type, count]) => 
                 `<p>${getReportEmoji(type)} ${type}: ${count}</p>`
             ).join('')}
-            <p><em>Radius: 500m</em></p>
+            <p><em>Radius: ${radius}m</em></p>
         </div>
     `;
-    
+
     zone.marker.bindPopup(popupContent);
 }
 
