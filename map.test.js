@@ -1,4 +1,4 @@
-//Example unit tests for map.js core functions
+//Unit tests for core functions
 const {
   calculateDistance,
   calculateBearing,
@@ -40,7 +40,7 @@ describe('map.js core functions', () => {
   });
 
   test('getReportEmoji returns correct emoji', () => {
-    expect(getReportEmoji('crime')).toBe('⚠️');
+    expect(getReportEmoji('crime')).toBe('🚨');
     expect(getReportEmoji('lighting')).toBe('🔦');
     expect(getReportEmoji('pothole')).toBe('🕳️');
     expect(getReportEmoji('safe')).toBe('✅');
