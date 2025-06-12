@@ -1,4 +1,4 @@
-// Example unit tests for map.js core functions
+//Example unit tests for map.js core functions
 const {
   calculateDistance,
   calculateBearing,
@@ -12,7 +12,7 @@ const {
 
 describe('map.js core functions', () => {
   test('calculateDistance returns correct value for known points', () => {
-    // Johannesburg to Pretoria (approx 52-54km)
+    //Johannesburg to Petoria (approx 54km)
     const dist = calculateDistance(-26.2041, 28.0473, -25.7479, 28.2293);
     const km = Math.round(dist / 1000);
     expect(km).toBeGreaterThanOrEqual(52);
@@ -20,15 +20,15 @@ describe('map.js core functions', () => {
   });
 
   test('calculateBearing returns correct bearing', () => {
-    // North (0 degrees)
+    //North (0 degrees)
     expect(Math.round(calculateBearing(0, 0, 1, 0))).toBe(0);
-    // East (90 degrees)
+    //East (90 degrees)
     expect(Math.round(calculateBearing(0, 0, 0, 1))).toBe(90);
   });
 
   test('calculateDestinationPoint returns a point at the correct distance', () => {
     const start = { lat: 0, lon: 0 };
-    const dest = calculateDestinationPoint(start.lat, start.lon, 1000, 90); // 1km east
+    const dest = calculateDestinationPoint(start.lat, start.lon, 1000, 90); //1km east
     const dist = calculateDistance(start.lat, start.lon, dest.lat, dest.lon);
     expect(Math.round(dist)).toBe(1000);
   });
@@ -59,12 +59,12 @@ describe('map.js core functions', () => {
   test('createCircleCoordinates returns correct number of points', () => {
     const points = createCircleCoordinates(0, 0, 1000);
     expect(Array.isArray(points)).toBe(true);
-    expect(points.length).toBeGreaterThan(70); // 72 + 1 (closed)
+    expect(points.length).toBeGreaterThan(70);
     expect(points[0]).toEqual(points[points.length - 1]);
   });
 
   test('calculateAvoidanceWaypoints returns array', () => {
-    // No red zones, should return empty array
+    //No red zones, should return empty array
     const waypoints = calculateAvoidanceWaypoints([0,0],[1,1],[]);
     expect(Array.isArray(waypoints)).toBe(true);
   });

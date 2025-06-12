@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <title>SafeRoute – Map</title>
-  <!-- Leaflet CSS -->
+
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   />
-  <!-- External Stylesheet -->
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -18,7 +18,6 @@
     <button id="manual-feedback-button" onclick="toggleManualFeedback()">📍</button>
   </div>
 
-  <!-- Report Options Banner -->
   <div id="report-options-banner" class="hidden">
     <div class="banner-header">
       <h3>Quick Reports</h3>
@@ -32,7 +31,6 @@
     </div>
   </div>
 
-  <!-- Manual Feedback Banner -->
   <div id="manual-feedback-banner" class="hidden">
     <div class="banner-header">
       <h3>Manual Reports & History</h3>
@@ -89,9 +87,7 @@
 
   <button id="panic-button" onclick="triggerPanic()">🚨 PANIC</button>
 
-  <!-- Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Your page JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script> 
   <script src="map.js"></script>
 </body>
 </html>
